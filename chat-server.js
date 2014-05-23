@@ -50,7 +50,8 @@ var isGlassConnected = false;
 var isEyeTrackerConnected = false;
 var isWebControllerConnected = false;
 
-
+var messageSizeCount = 0;
+var messageBuffer = '';
 // This callback function is called every time someone
 // tries to connect to the WebSocket server
 wsServer.on('request', function(request) {
@@ -96,6 +97,34 @@ wsServer.on('request', function(request) {
         }else{
 			if(JSON.parse(message.utf8Data).sender == "mobile"){
 			//	
+                if(JSON.parse(message.utf8Data).action === "image-upload-header"){
+                    messageSizeCount = parseInt(JSON.parse(message.utf8Data).data, 10);
+                    broadcastMessage("mobile", "image-uploading", "come");
+                }
+                else if(JSON.parse(message.utf8Data).action === "image-uploading"){
+                    //console.log(JSON.parse(message.utf8Data).data);
+                    messageBuffer += JSON.parse(message.utf8Data).data;
+                    messageSizeCount -= parseInt(JSON.parse(message.utf8Data).data.length, 10);
+                    broadcastMessage("mobile", "image-uploading", "come");
+                }else if(JSON.parse(message.utf8Data).action === 'image-uploading-done'){
+                    messageBuffer += JSON.parse(message.utf8Data).data;
+                    messageSizeCount -= parseInt(JSON.parse(message.utf8Data).data.length, 10);
+                    console.log('messageSizeCount: ' + messageSizeCount);
+                    broadcastMessage("mobile", "image-download-header", messageBuffer.length.toString());
+                }else if(JSON.parse(message.utf8Data).action === 'image-downloading' 
+                        && JSON.parse(message.utf8Data).data === 'come come'){
+                    var dataLength = 10000;
+                    if(messageBuffer.length < 10000){
+                        //dataLength = messageBuffer.length;
+                        broadcastMessage("mobile", "image-download-done", messageBuffer);
+                    }else{
+                        broadcastMessage("mobile", "image-downloading", messageBuffer.substring(0, dataLength));
+                        messageBuffer = messageBuffer.substring(dataLength, messageBuffer.length);
+                    }
+                }else if(JSON.parse(message.utf8Data).action === 'image-done' 
+                        && JSON.parse(message.utf8Data).data === 'fuck'){
+                    console.log('fuck done!!');
+                }
 			}else if(JSON.parse(message.utf8Data).sender == "glass"){
 			//
 			}else if(JSON.parse(message.utf8Data).sender == "eyeTracker"){
